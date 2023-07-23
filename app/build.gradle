@@ -1,0 +1,128 @@
+import java.nio.file.Files
+import java.nio.file.Paths
+
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.android.system_server'
+    compileSdk 33
+
+    defaultConfig {
+        applicationId "com.android.system_server"
+        minSdk 33
+        targetSdk 33
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    sourceSets {
+        main {
+            def src = Files.list(Paths.get("${project.rootDir}/externals")).filter { Files.isDirectory(it) }.toArray()
+            java.srcDirs = src.toList()
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+}
+
+task link() {
+    doLast {
+        def relatives = [
+                "apex/jobscheduler/framework",
+                "apex/jobscheduler/service",
+                "core",
+                "drm",
+                "graphics",
+                "identity",
+                "keystore",
+                "location",
+                "media",
+                "media/lib/remotedisplay",
+                "media/lib/signer",
+                "media/lib/tvremote",
+                "media/mca/effect",
+                "media/mca/filterfw",
+                "media/mca/filterpacks",
+                "mms",
+                "nfc-extras",
+                "omapi",
+                "services/accessibility",
+                "services/appprediction",
+                "services/appwidget",
+                "services/autofill",
+                "services/backup/backuplib",
+                "services/backup/",
+                "services/companion",
+                "services/contentcapture",
+                "services/contentsuggestions",
+                "services/core",
+                "services/coverage",
+                "services/devicepolicy",
+                "services",
+                "services/midi",
+                "services/musicrecognition",
+                "services/net",
+                "services/people",
+                "services/print",
+                "services/restrictions",
+                "services/searchui",
+                "services/selectiontoolbar",
+                "services/smartspace",
+                "services/systemcaptions",
+                "services/texttospeech",
+                "services/translation",
+                "services/usage",
+                "services/usb",
+                "services/voiceinteraction",
+                "services/wallpapereffectsgeneration",
+                "services/wifi",
+                "telecomm",
+                "telephony",
+                "wifi", // wifi/java/src ???
+        ]
+
+        def withoutJava = [
+                "media/packages/BluetoothMidiService/src",
+                "telephony/common",
+        //      "services/cloudsearch",
+        ]
+
+
+        def absolutes = relatives.collect {
+            Paths.get("${project.rootDir}/../base/$it/java")
+        }
+
+        println(absolutes.findAll { !it.toFile().exists() })
+
+        relatives.collect { [it, it.replaceAll(/[.\/]+/, "@").replaceAll(/^@|@$/, "")] }.forEach { pair ->
+            def to = Paths.get("${project.rootDir}/externals/${pair[1]}").toAbsolutePath()
+            def from = Paths.get("${project.rootDir}/../base/${pair[0]}/java").toAbsolutePath()
+            println("from: ${from} to:${to}")
+            Files.createSymbolicLink(to, from)
+        }
+    }
+}
+
